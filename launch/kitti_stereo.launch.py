@@ -64,7 +64,7 @@ def generate_launch_description():
             'min_init_matches': 50,
             'min_track_matches': 30,
             'log_trajectory': True,
-            'trajectory_file': 'stereo_trajectory.txt',
+            'trajectory_file': 'Outputstereo_trajectory.txt',
             'map_frame': 'map',
             'camera_frame': 'camera',
         }]

@@ -64,7 +64,7 @@ def generate_launch_description():
             'min_init_matches': 100,
             'min_track_matches': 30,
             'log_trajectory': True,
-            'trajectory_file': 'kitti_trajectory.txt',
+            'trajectory_file': 'Output/kitti_trajectory.txt',
             'map_frame': 'map',
             'camera_frame': 'camera',
         }]

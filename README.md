@@ -1,150 +1,128 @@
 # ORB-SLAM Python (ROS 2 Humble)
 
-A CPU-optimized, Python-based Monocular Visual SLAM system running as a ROS 2 Humble node.
+A CPU-optimized, Python-based Visual SLAM system supporting **Monocular** and **Stereo** cameras.
 
 ## Features
 
-- **Pure Python** implementation using OpenCV and NumPy
-- **ORB features** for robust feature extraction and matching
-- **Two-view initialization** using Essential matrix decomposition
-- **Frame-to-frame tracking** via PnP with RANSAC
-- **Keyframe-based mapping** with triangulation
-- **Lightweight loop closure** using descriptor similarity
-- **Real-time visualization** in RViz
-
-## Requirements
-
-- Ubuntu 22.04
-- ROS 2 Humble
-- Python 3.10+
-- OpenCV 4.x
-- NumPy
-- SciPy
+- **Monocular SLAM** - Two-view initialization with Essential matrix
+- **Stereo SLAM** - Instant initialization with direct depth from disparity
+- **ORB Features** - Robust feature extraction and matching
+- **Real-time Visualization** - RViz integration with trajectory and map points
+- **PLY Export** - Save 3D map as point cloud
+- **Dataset Converters** - Convert images/video to ROS 2 bags
 
 ## Installation
 
 ```bash
-# Navigate to your ROS 2 workspace
 cd ~/ros2_ws/src
+git clone https://github.com/Farhan3376/orb-slam-ros2-humble.git
 
-# Clone or copy the package
-cp -r /path/to/orb_slam_py .
-
-# Install dependencies
 cd ~/ros2_ws
 rosdep install --from-paths src --ignore-src -r -y
-
-# Build
 colcon build --packages-select orb_slam_py
 source install/setup.bash
 ```
 
-## Usage
+## KITTI Dataset
 
-### Running with a camera
+Download the KITTI raw dataset for testing:
+
+1. Visit: https://www.cvlibs.net/datasets/kitti/raw_data.php
+2. Download a synced+rectified sequence (e.g., `2011_09_26_drive_0001`)
+3. Convert to ROS 2 bag using [kitti_to_ros2bag](https://github.com/Farhan3376/kitti_to_ros2bag) or your preferred converter
+
+**Camera calibration** for KITTI:
+- fx, fy: 718.856
+- cx: 607.1928
+- cy: 185.2157
+- Baseline: 0.54m
+
+## Quick Start
+
+### Stereo SLAM (KITTI)
 
 ```bash
-# Terminal 1: Start camera driver (example with usb_cam)
-ros2 run usb_cam usb_cam_node_exe --ros-args \
-    -p camera_info_url:=file:///path/to/calibration.yaml
-
-# Terminal 2: Start ORB-SLAM
-ros2 launch orb_slam_py orb_slam.launch.py
-
-# Terminal 3: Visualize in RViz
-rviz2
-```
-
-### Running with a ROS 2 bag
-
-```bash
-# Terminal 1: Start ORB-SLAM
-ros2 launch orb_slam_py orb_slam.launch.py \
-    image_topic:=/camera/image_raw \
-    camera_info_topic:=/camera/camera_info
+# Terminal 1: Launch stereo SLAM
+ros2 launch orb_slam_py kitti_stereo.launch.py
 
 # Terminal 2: Play bag
-ros2 bag play /path/to/bag
+ros2 bag play kitti_bag --rate 0.5
 ```
 
-### Launch Parameters
+### Monocular SLAM
 
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `image_topic` | `/camera/image_raw` | Input image topic |
-| `camera_info_topic` | `/camera/camera_info` | Camera info topic |
-| `num_features` | `1000` | Number of ORB features |
-| `scale_factor` | `1.2` | ORB pyramid scale factor |
-| `num_levels` | `8` | ORB pyramid levels |
-| `min_parallax` | `1.0` | Min parallax (degrees) for init |
-| `min_init_matches` | `100` | Min matches for initialization |
-| `min_track_matches` | `30` | Min matches for tracking |
-| `log_trajectory` | `true` | Log trajectory to file |
-| `trajectory_file` | `trajectory.txt` | Trajectory output path |
-| `map_frame` | `map` | Map frame ID |
-| `camera_frame` | `camera` | Camera frame ID |
+```bash
+ros2 launch orb_slam_py kitti.launch.py
+```
+
+### Custom Dataset
+
+```bash
+ros2 launch orb_slam_py custom.launch.py \
+    fx:=500 fy:=500 cx:=320 cy:=240 \
+    width:=640 height:=480
+```
+
+## Dataset Converters
+
+Convert your own data to ROS 2 bags:
+
+```bash
+# Images → Bag (Monocular)
+python3 scripts/images_to_bag.py --images /path/to/images --output my_bag
+
+# Images → Bag (Stereo)
+python3 scripts/images_to_bag.py --left /path/left --right /path/right --output stereo_bag
+
+# Video → Bag
+python3 scripts/video_to_bag.py --video video.mp4 --output video_bag --fps 10
+```
 
 ## Topics
 
-### Subscribed
-- `/camera/image_raw` (sensor_msgs/Image) - Input camera image
-- `/camera/camera_info` (sensor_msgs/CameraInfo) - Camera intrinsics
+| Topic | Type | Description |
+|-------|------|-------------|
+| `/orb_slam/pose` | PoseStamped | Current camera pose |
+| `/orb_slam/path` | Path | Camera trajectory |
+| `/orb_slam/map_points` | PointCloud2 | 3D map points |
 
-### Published
-- `/orb_slam/pose` (geometry_msgs/PoseStamped) - Current camera pose
-- `/orb_slam/path` (nav_msgs/Path) - Camera trajectory
-- `/orb_slam/map_points` (sensor_msgs/PointCloud2) - Sparse 3D map
+## Parameters
 
-### TF
-- `map` → `camera` transform
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `num_features` | 1000 | ORB features per frame |
+| `baseline` | 0.54 | Stereo baseline (meters) |
+| `min_init_matches` | 100 | Matches for initialization |
+| `log_trajectory` | true | Save trajectory to file |
 
-## RViz Configuration
+## Output Files
 
-Add the following displays in RViz2:
+After running SLAM:
 
-1. **PoseStamped**: Topic `/orb_slam/pose`
-2. **Path**: Topic `/orb_slam/path`
-3. **PointCloud2**: Topic `/orb_slam/map_points`
-4. **TF**: Enable to see coordinate frames
-
-Set **Fixed Frame** to `map`.
-
-## Output
-
-### Trajectory File (TUM format)
-
-The trajectory is logged in TUM format:
-```
-timestamp tx ty tz qx qy qz qw
-```
-
-This format is compatible with TUM benchmark evaluation tools.
-
-## Performance
-
-Target performance on 8GB RAM:
-- **Frame rate**: ≥10 FPS
-- **Features**: 1000 ORB features per frame
-- **Memory**: <2GB typical usage
+- `Output/stereo_trajectory.txt` - TUM format trajectory
+- `Output/stereo_map.ply` - 3D point cloud (open with MeshLab)
 
 ## Architecture
 
 ```
 orb_slam_py/
-├── node.py          # Main ROS 2 node
-├── tracking.py      # ORB extraction, matching, pose estimation
-├── mapping.py       # Keyframe and map point management
-├── geometry.py      # SE(3), projection, triangulation
-├── visualization.py # RViz publishers
-└── utils.py         # Data structures and helpers
+├── node.py            # Monocular SLAM node
+├── stereo_node.py     # Stereo SLAM node
+├── stereo.py          # Stereo matching
+├── tracking.py        # ORB + pose estimation
+├── mapping.py         # Keyframe management
+├── geometry.py        # SE3, projection
+├── visualization.py   # RViz publishers
+└── scripts/           # Dataset converters
 ```
 
-## Limitations
+## Stereo vs Monocular
 
-- **Monocular only**: No stereo or RGB-D support
-- **No bundle adjustment**: Simplified optimization for CPU performance
-- **Simple loop closure**: Uses descriptor similarity instead of full BoW
-- **Scale ambiguity**: Monocular SLAM cannot recover absolute scale
+| Feature | Monocular | Stereo |
+|---------|-----------|--------|
+| Initialization | Needs motion | Instant |
+| Scale | Up to scale | Absolute |
+| Depth | Triangulation | Disparity |
 
 ## License
 
