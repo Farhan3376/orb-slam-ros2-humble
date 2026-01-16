@@ -29,7 +29,6 @@ Download the KITTI raw dataset for testing:
 
 1. Visit: https://www.cvlibs.net/datasets/kitti/raw_data.php
 2. Download a synced+rectified sequence (e.g., `2011_09_26_drive_0001`)
-3. Convert to ROS 2 bag using [kitti_to_ros2bag](https://github.com/Farhan3376/kitti_to_ros2bag) or your preferred converter
 
 **Camera calibration** for KITTI:
 - fx, fy: 718.856
